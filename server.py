@@ -2,7 +2,6 @@ import socket
 import struct
 import os
 
-
 class Server:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -52,7 +51,6 @@ class Server:
                     '8s i 9s i', b'HTTP/1.0', acceptMsg, b'OK       ', fileSize)
                 self.c.send(packet)
                 for line in lines:
-                    print(line)
                     stringSize = len(line)
                     packet = struct.pack(
                         str(stringSize)+'s', line.encode("utf-8"))
@@ -72,7 +70,6 @@ class Server:
         payloadSize = int(MsgData[4])
         try:
             f= open(filename, 'a')
-            print('FILE OPENED')
             while payloadSize != 0:
                 if payloadSize > 1000:
                     data = self.c.recv(1000)
