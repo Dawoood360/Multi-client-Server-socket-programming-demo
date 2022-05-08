@@ -1,4 +1,3 @@
-from curses import raw
 import socket
 import struct
 import sys
@@ -26,7 +25,7 @@ class Client:
                 f.seek(0, os.SEEK_END)
                 fileSize=f.tell()
                 f.close()
-        msg = "POST /"+fileName+" HTTP/1.0\nHost: reqbin.com\nContent-Length:"+str(fileSize)
+        msg = "POST /"+fileName+" HTTP/1.0\nHost: reqbin.com\nContent-Length: "+str(fileSize)
         stringSize = len(msg)
         packet = struct.pack(str(stringSize)+'s', msg.encode("utf-8"))
         return packet

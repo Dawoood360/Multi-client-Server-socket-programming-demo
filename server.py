@@ -69,9 +69,10 @@ class Server:
         filename = MsgData[1]
         tokens = filename.split('/')
         filename = 'f'+tokens[1]
-        print(filename)
+        payloadSize = int(MsgData[4])
         try:
-            f= open(filename, 'w')
+            f= open(filename, 'a')
+            print('FILE OPENED')
             while payloadSize != 0:
                 if payloadSize > 1000:
                     data = self.c.recv(1000)
