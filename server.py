@@ -1,76 +1,103 @@
 import socket
 import struct
 import os
+from _thread import *
+import threading
+import time
 
+ 
+lock = threading.Lock()
 class Server:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print("Socket successfully created")
-        port = 85
+        port = 80
         self.sock.bind(('', port))
         print("socket binded to %s" % (port))
         self.sock.listen(5)
         print("socket is listening")
-
-    def receiveState(self):
-        try:
-            self.c, addr = self.sock.accept()
-            while True:
-                packet = self.c.recv(200)
-                if not packet:
-                    self.c.close()
+    def clientThread(self,c):
+        msg2=None
+        startTime=None
+        while True:
+                packetLength = c.recv(5).decode("utf-8")
+                if packetLength =="" :
+                    # lock.release()
+                    c.close()
                     break
+                    # if  msg2=="1.0":
+                    #     c.close()
+                    #     break
+                    # elif msg2=="1.1":
+                    #     if startTime==None:
+                    #         startTime=time.time()
+                    #     else:
+                    #         currentTime=time.time()
+                    #         if currentTime-startTime>=1000:
+                    #             c.close()
+                    #             break
+                    #     continue
+                packet = c.recv(int(packetLength)) 
                 msg = struct.unpack(str(len(packet))+'s', packet)
                 msg = msg[0].decode("utf-8")
-                self.respondState(msg)
-        except KeyboardInterrupt:
-            self.c.close()
+                msg2=msg.split(" ")[2].split("/")[1]
+                print(msg2)
+                self.respondState(msg,c)
+    def receiveState(self):
+        while True:
+            try:
+                self.c, addr = self.sock.accept()
+                # lock.acquire()
+                print('Connected to :', addr[0], ':', addr[1])
+                start_new_thread(self.clientThread, (self.c,))
+            except KeyboardInterrupt:
+                self.c.close()
 
-    def respondState(self, msg):
+    def respondState(self, msg,c):
         data = msg.split(' ')
         if data[0] == 'GET':
-            self.getMethod(data)
+            self.getMethod(data,c)
             # print('Get')
         if data[0] == 'POST':
-            for d in data:
-                print(d)
-            self.postMethod(data)
+           self.postMethod(data,c)
 
-    def getMethod(self, Msgdata):
+    def getMethod(self, Msgdata,c):
+        
         filename = Msgdata[1]
-        tokens = filename.split('/')
-        filename = tokens[1]
         print(filename)
         try:
-            with open(filename) as f:
-                lines = f.readlines()
+            with open("database"+filename,"rb") as f:
                 f.seek(0, os.SEEK_END)
                 fileSize = f.tell()
+                f.seek(0, os.SEEK_SET)
                 acceptMsg = 200  # Message Accepted
                 packet = struct.pack(
                     '8s i 9s i', b'HTTP/1.0', acceptMsg, b'OK       ', fileSize)
-                self.c.send(packet)
-                for line in lines:
-                    stringSize = len(line)
-                    packet = struct.pack(
-                        str(stringSize)+'s', line.encode("utf-8"))
-                    self.c.send(packet)
+                c.send(packet)
+                data=f.read()
+                c.send(data)
                 return
         except:
             msg = 404
             packet = struct.pack('8s i 9s i', b'HTTP/1.0',
                                  msg, b'NOT FOUND', 0)
-            self.c.send(packet)
+
+            c.send(packet)
             return
 
-    def postMethod(self, MsgData):
+    def postMethod(self, MsgData,c):
+        print(MsgData)
         filename = MsgData[1]
-        tokens = filename.split('/')
-        filename = 'f'+tokens[1]
-        payloadSize = int(MsgData[4])
+        pay=MsgData[len(MsgData)-1]
+        print(pay)
+        payloadSize = int(pay)
+        
         try:
-            f= open(filename, 'a')
+            
+            f= open("database"+filename, 'wb')
+            
             while payloadSize != 0:
+               
                 if payloadSize > 1000:
                     data = self.c.recv(1000)
                     payloadSize -= 1000
@@ -84,16 +111,17 @@ class Server:
                 else:
                     data = self.c.recv(payloadSize)
                     payloadSize = 0
-                f.write(data.decode('utf-8'))
+                f.write(data)
             f.close()
             msg = 200
             packet = struct.pack(
                 '8s i 9s', b'HTTP/1.0', msg, b'OK       ')
-            self.c.send(packet)
+            c.send(packet)
+            
         except:
             msg = 404
             packet = struct.pack('8s i 9s', b'HTTP/1.0', msg, b'NOT FOUND')
-            self.c.send(packet)
+            c.send(packet)
             return
 
 

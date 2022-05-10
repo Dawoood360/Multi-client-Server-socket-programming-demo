@@ -1,0 +1,5 @@
+GET /eric.txt HTTP/1.0 
+GET /sck.txt HTTP/1.0 
+GET /info.txt HTTP/1.0 
+
+
