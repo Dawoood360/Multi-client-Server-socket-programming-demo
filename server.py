@@ -1,3 +1,4 @@
+from pickle import TRUE
 import socket
 import struct
 import os
@@ -16,33 +17,47 @@ class Server:
         print("socket binded to %s" % (port))
         self.sock.listen(5)
         print("socket is listening")
+        self.msgs=[]
     def clientThread(self,c):
         msg2=None
         startTime=None
+        timeoutenabled = False
         while True:
                 packetLength = c.recv(5).decode("utf-8")
                 if packetLength =="" :
+                    # print('HI')
                     # lock.release()
-                    c.close()
-                    break
-                    # if  msg2=="1.0":
-                    #     c.close()
-                    #     break
-                    # elif msg2=="1.1":
-                    #     if startTime==None:
-                    #         startTime=time.time()
-                    #     else:
-                    #         currentTime=time.time()
-                    #         if currentTime-startTime>=1000:
-                    #             c.close()
-                    #             break
-                    #     continue
-                packet = c.recv(int(packetLength)) 
-                msg = struct.unpack(str(len(packet))+'s', packet)
-                msg = msg[0].decode("utf-8")
-                msg2=msg.split(" ")[2].split("/")[1]
-                print(msg2)
-                self.respondState(msg,c)
+                    if  msg2=="1.0":
+                        print('connection Closed')
+                        c.close()
+                        break
+                    elif msg2=="1.1":
+                        # print('1.1')
+                        if not timeoutenabled:
+                            print('timeout set')
+                            startTime=time.time()
+                            timeoutenabled = TRUE
+                            for msg in self.msgs:
+                                self.respondState(msg,c)
+                        elif time.time()-startTime >5:
+                            print('connection Closed')
+                            c.close()
+                            break
+
+                else:
+                    packet = c.recv(int(packetLength)) 
+                    msg = struct.unpack(str(len(packet))+'s', packet)
+                    msg = msg[0].decode("utf-8")
+                    msg2=msg.split(" \n")[0].split(' ')[2].split('\n')[0].split('/')[1]
+                if msg2=="1.0":
+                    self.respondState(msg,c)
+                elif msg2=="1.1":
+                    self.msgs.append(msg)
+        
+            
+        
+
+                
     def receiveState(self):
         while True:
             try:
@@ -86,7 +101,6 @@ class Server:
             return
 
     def postMethod(self, MsgData,c):
-        print(MsgData)
         filename = MsgData[1]
         pay=MsgData[len(MsgData)-1]
         print(pay)

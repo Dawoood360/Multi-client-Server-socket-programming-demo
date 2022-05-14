@@ -19,23 +19,27 @@ class Client:
 
     def sendState(self,request):
         
-        method =request.split(" ")[0]
-        fileName=request.split(" ")[1]
+        self.method =request.split(" ")[0]
+        self.fileName=request.split(" ")[1]
         
-        if method == 'GET':
-            packet = self.makePacket(request)
-            lengthstr=str(len(packet))
-            print(lengthstr)
-            bytesReceived=len(lengthstr)
-            print(bytesReceived)
-            while bytesReceived<5:
-                lengthstr+=" "
-                bytesReceived+=1
-            
-            self.s.send(lengthstr.encode("utf-8"))
-            self.s.send(packet)
-            self.receiveState(method,fileName)
-        elif method=='POST':
+        if self.method == 'GET':
+            try:
+                f = open("clientDatabase"+self.fileName)
+                print('File found in cache')
+                
+            except:
+                packet = self.makePacket(request)
+                lengthstr=str(len(packet))
+                print(lengthstr)
+                bytesReceived=len(lengthstr)
+                print(bytesReceived)
+                while bytesReceived<5:
+                    lengthstr+=" "
+                    bytesReceived+=1
+                
+                self.s.send(lengthstr.encode("utf-8"))
+                self.s.send(packet)
+        elif self.method=='POST':
             
             try:
                 packet = self.makePacket(request)
@@ -52,8 +56,8 @@ class Client:
             
             self.s.send(lengthstr.encode("utf-8"))
             self.s.send(packet)
-            self.sendFile(fileName)
-            self.receiveState(method,fileName)
+            self.sendFile(self.fileName)
+            
         
         # self.s.close()
     def sendFile(self,fileName):
@@ -66,6 +70,7 @@ class Client:
     def receiveState(self,method,fileName):
         
         if method == 'GET':
+            
             packet = self.s.recv(28)
             rawMsg = struct.unpack('8s i 9s i', packet)
             Responsemsg = rawMsg[1]
@@ -112,13 +117,14 @@ def initConnection():
                 if(lines[i].split(" ")[0]=="GET") or (lines[i].split(" ")[0]=="POST"):
                     client=Client()
                     client.sendState(request)
-                    
+                    client.receiveState(client.method,client.fileName)
                     request=lines[i]
                 elif(i==len(lines)-1):
                     
                     client=Client()
                     request+=lines[i]
                     client.sendState(request)
+                    client.receiveState(client.method,client.fileName)
                 else:
                     request+=lines[i]
                 
